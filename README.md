@@ -2,6 +2,9 @@
 
 A small desktop tool for browsing and controlling Windows services with an egui-based interface. It lists services with their display name, status, start type, and process ID, and lets you stop or disable services directly.
 
+## Screenshot
+![Windows Service GUI](screenshot/appScreenshot.png)
+
 ## Features
 - Enumerates all Windows services via the Service Control Manager
 - Fuzzy search by service name or display name
