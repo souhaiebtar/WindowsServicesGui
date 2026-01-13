@@ -229,6 +229,58 @@ fn stop_service(name: &str) -> Result<(), String> {
     }
 }
 
+fn start_service(name: &str) -> Result<(), String> {
+    let scm = open_scm().map_err(|e| format!("OpenSCManager failed: {e}"))?;
+    let name_w = wide_null(name);
+    let svc = unsafe { OpenServiceW(scm, PCWSTR(name_w.as_ptr()), SERVICE_START) }
+        .map_err(|e| format!("OpenService failed: {e}"))?;
+
+    let result = unsafe { StartServiceW(svc, None) };
+
+    unsafe {
+        let _ = CloseServiceHandle(svc);
+        let _ = CloseServiceHandle(scm);
+    }
+
+    match result {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("StartService failed: {e}")),
+    }
+}
+
+fn enable_service(name: &str) -> Result<(), String> {
+    let scm = open_scm().map_err(|e| format!("OpenSCManager failed: {e}"))?;
+    let name_w = wide_null(name);
+    let svc = unsafe { OpenServiceW(scm, PCWSTR(name_w.as_ptr()), SERVICE_CHANGE_CONFIG) }
+        .map_err(|e| format!("OpenService failed: {e}"))?;
+
+    let result = unsafe {
+        ChangeServiceConfigW(
+            svc,
+            ENUM_SERVICE_TYPE(SERVICE_NO_CHANGE),
+            SERVICE_DEMAND_START,
+            SERVICE_ERROR(SERVICE_NO_CHANGE),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    };
+
+    unsafe {
+        let _ = CloseServiceHandle(svc);
+        let _ = CloseServiceHandle(scm);
+    }
+
+    match result {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("ChangeServiceConfig failed: {e}")),
+    }
+}
+
 fn disable_service(name: &str) -> Result<(), String> {
     let scm = open_scm().map_err(|e| format!("OpenSCManager failed: {e}"))?;
     let name_w = wide_null(name);
@@ -366,6 +418,24 @@ impl App for ServiceApp {
                         ui.label(format!("Start: {}", svc.start_type));
                         if svc.process_id != 0 {
                             ui.label(format!("PID: {}", svc.process_id));
+                        }
+                        if svc.status != "Running" {
+                            if ui.button("Start").clicked() {
+                                if svc.start_type == "Disabled" {
+                                    match enable_service(&svc.name) {
+                                        Ok(_) => self.status_message = format!("Enabled {}", svc.name),
+                                        Err(e) => {
+                                            self.status_message = e;
+                                            return;
+                                        }
+                                    }
+                                }
+                                match start_service(&svc.name) {
+                                    Ok(_) => self.status_message = format!("Started {}", svc.name),
+                                    Err(e) => self.status_message = e,
+                                }
+                                self.refresh();
+                            }
                         }
                         if ui.button("Stop").clicked() {
                             match stop_service(&svc.name) {

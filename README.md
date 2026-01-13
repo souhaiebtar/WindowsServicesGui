@@ -12,6 +12,10 @@ A small desktop tool for browsing and controlling Windows services with an egui-
 - Stop or disable services with immediate refresh
 - Copy a service name by right-clicking its row
 
+## TODO
+- [ ] Refresh status of services if changes occur
+- [ ] Add more tests
+
 ## Requirements
 - Windows 10/11
 - Rust toolchain (edition 2024) with Cargo
